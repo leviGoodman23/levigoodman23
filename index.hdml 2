@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Levi's Tic Tac Toe</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: radial-gradient(circle, #0f0c29, #302b63, #24243e);
+            color: #fff;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            margin-top: 30px;
+            font-size: 48px;
+            color: #00fff0;
+            text-shadow: 0 0 10px #00fff0, 0 0 20px #00fff0;
+        }
+
+        #modeSelect {
+            margin: 20px 0;
+        }
+
+        #modeSelect button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #00fff0;
+            color: #000;
+            transition: 0.3s;
+        }
+
+        #modeSelect button:hover {
+            background: #00c0c0;
+            color: #fff;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(3, 120px);
+            grid-gap: 10px;
+            justify-content: center;
+            margin: 20px auto;
+        }
+
+        .cell {
+            width: 120px;
+            height: 120px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            font-size: 64px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #0ff;
+        }
+
+        .cell:hover {
+            background-color: rgba(0, 255, 255, 0.2);
+        }
+
+        #status {
+            font-size: 24px;
+            margin-top: 20px;
+        }
+
+        #resetBtn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            background: #ff00ff;
+            color: #fff;
+            transition: 0.3s;
+        }
+
+        #resetBtn:hover {
+            background: #c000c0;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Levi's Tic Tac Toe</h1>
+
+<div id="modeSelect">
+    <button onclick="setMode('easy')">Easy</button>
+    <button onclick="setMode('medium')">Medium</button>
+    <button onclick="setMode('hard')">Hard</button>
+</div>
+
+<div id="board"></div>
+<div id="status">Player X's turn</div>
+<button id="resetBtn" onclick="resetGame()">Reset Game</button>
+
+<script>
+let board = ["", "", "", "", "", "", "", "", ""];
+let player = "X";
+let ai = "O";
+let gameActive = true;
+let currentPlayer = player;
+let difficulty = "easy";
+
+const boardDiv = document.getElementById("board");
+const statusDiv = document.getElementById("status");
+
+// Initialize board
+function initBoard() {
+    boardDiv.innerHTML = "";
+    for (let i = 0; i < 9; i++) {
+        const cell = document.createElement("div");
+        cell.classList.add("cell");
+        cell.dataset.index = i;
+        cell.addEventListener("click", handleClick);
+        boardDiv.appendChild(cell);
+    }
+}
+
+initBoard();
+
+// Game logic
+function handleClick(e) {
+    const index = e.target.dataset.index;
+    if (!gameActive || board[index] !== "" || currentPlayer !== player) return;
+
+    makeMove(index, player);
+    checkResult();
+
+    if (gameActive) {
+        currentPlayer = ai;
+        setTimeout(aiMove, 400);
+    }
+}
+
+function makeMove(index, symbol) {
+    board[index] = symbol;
+    boardDiv.children[index].textContent = symbol;
+}
+
+function checkWin(b, symbol) {
+    const winCombos = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+    ];
+    return winCombos.some(combo => combo.every(i => b[i] === symbol));
+}
+
+function checkDraw() {
+    return board.every(cell => cell !== "");
+}
+
+function checkResult() {
+    if (checkWin(board, currentPlayer)) {
+        statusDiv.textContent = currentPlayer === player ? "🎉 You Win!" : "🤖 AI Wins!";
+        gameActive = false;
+    } else if (checkDraw()) {
+        statusDiv.textContent = "🤝 It's a Draw!";
+        gameActive = false;
+    } else {
+        currentPlayer = currentPlayer === player ? ai : player;
+        statusDiv.textContent = currentPlayer === player ? "Player X's turn" : "AI's turn";
+    }
+}
+
+// AI logic
+function aiMove() {
+    if (!gameActive) return;
+    let index;
+
+    if (difficulty === "easy") {
+        index = randomMove();
+    } else if (difficulty === "medium") {
+        index = Math.random() < 0.5 ? randomMove() : bestMove();
+    } else {
+        index = bestMove();
+    }
+
+    makeMove(index, ai);
+    checkResult();
+}
+
+function randomMove() {
+    const empty = board.map((v,i)=>v===""?i:null).filter(v=>v!==null);
+    return empty[Math.floor(Math.random() * empty.length)];
+}
+
+// Simple unbeatable AI using minimax
+function bestMove() {
+    let bestScore = -Infinity;
+    let move;
+    for (let i = 0; i < 9; i++) {
+        if (board[i] === "") {
+            board[i] = ai;
+            let score = minimax(board, 0, false);
+            board[i] = "";
+            if (score > bestScore) {
+                bestScore = score;
+                move = i;
+            }
+        }
+    }
+    return move;
+}
+
+function minimax(newBoard, depth, isMaximizing) {
+    if (checkWin(newBoard, ai)) return 10 - depth;
+    if (checkWin(newBoard, player)) return depth - 10;
+    if (!newBoard.includes("")) return 0;
+
+    if (isMaximizing) {
+        let bestScore = -Infinity;
+        for (let i = 0; i < 9; i++) {
+            if (newBoard[i] === "") {
+                newBoard[i] = ai;
+                let score = minimax(newBoard, depth+1, false);
+                newBoard[i] = "";
+                bestScore = Math.max(score, bestScore);
+            }
+        }
+        return bestScore;
+    } else {
+        let bestScore = Infinity;
+        for (let i = 0; i < 9; i++) {
+            if (newBoard[i] === "") {
+                newBoard[i] = player;
+                let score = minimax(newBoard, depth+1, true);
+                newBoard[i] = "";
+                bestScore = Math.min(score, bestScore);
+            }
+        }
+        return bestScore;
+    }
+}
+
+// Set difficulty
+function setMode(mode) {
+    difficulty = mode;
+    resetGame();
+}
+
+// Reset game
+function resetGame() {
+    board = ["", "", "", "", "", "", "", "", ""];
+    gameActive = true;
+    currentPlayer = player;
+    statusDiv.textContent = "Player X's turn";
+    initBoard();
+}
+</script>
+
+</body>
+</html>
